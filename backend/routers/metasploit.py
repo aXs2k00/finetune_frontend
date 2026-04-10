@@ -1,11 +1,31 @@
+"""
+Metasploit MCP Router
+
+WARNING: This router exposes dangerous functionality for executing Metasploit modules.
+It should only be used in a secured internal API environment with proper network isolation
+and access controls. Do not expose these endpoints to the public internet.
+
+Security Considerations:
+- All endpoints in this router can execute arbitrary Metasploit modules
+- No authentication is enforced at the router level
+- Ensure proper network segmentation and firewall rules are in place
+- Consider adding API gateway authentication in front of this service
+"""
+
 from fastapi import APIRouter, HTTPException
 from typing import List, Optional
 from pydantic import BaseModel
 import subprocess
 import json
 import re
+import shlex
 
 router = APIRouter(prefix="/api/msf", tags=["metasploit"])
+
+
+def sanitize_option_value(value: str) -> str:
+    """Sanitize a value to prevent command injection."""
+    return shlex.quote(str(value))
 
 
 class ExploitRequest(BaseModel):
@@ -125,9 +145,9 @@ async def search_payloads(query: str = ""):
 @router.post("/exploit", response_model=ExploitResult)
 async def run_exploit(request: ExploitRequest):
     options = request.options or {}
-    options_str = " ".join([f"{k}={v}" for k, v in options.items()])
+    options_str = " ".join([f"{k}={sanitize_option_value(v)}" for k, v in options.items()])
     
-    cmd = f"use exploit/{request.module}; set RHOSTS {request.target}; set PAYLOAD {request.payload or 'generic/shell_bind_tcp'}; set {options_str}; exploit"
+    cmd = f"use exploit/{request.module}; set RHOSTS {sanitize_option_value(request.target or '')}; set PAYLOAD {sanitize_option_value(request.payload or 'generic/shell_bind_tcp')}; set {options_str}; exploit"
     output = await run_msf_command(cmd, timeout=120)
     
     session_id = None
@@ -148,9 +168,9 @@ async def run_exploit(request: ExploitRequest):
 @router.post("/auxiliary", response_model=ExploitResult)
 async def run_auxiliary(request: AuxiliaryRequest):
     options = request.options or {}
-    options_str = " ".join([f"{k}={v}" for k, v in options.items()])
+    options_str = " ".join([f"{k}={sanitize_option_value(v)}" for k, v in options.items()])
     
-    cmd = f"use auxiliary/{request.module}; set RHOSTS {request.target}; set {options_str}; run"
+    cmd = f"use auxiliary/{request.module}; set RHOSTS {sanitize_option_value(request.target or '')}; set {options_str}; run"
     output = await run_msf_command(cmd, timeout=120)
     
     success = "[+]" in output or "completed" in output.lower()
