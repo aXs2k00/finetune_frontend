@@ -3,6 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+interface NavLinkProps {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+}
+
+function NavLink({ href, children, className }: NavLinkProps) {
+  return (
+    <Link href={href} className={className}>
+      <a suppressHydrationWarning>{children}</a>
+    </Link>
+  );
+}
+
 interface NavItem {
   label: string;
   href: string;
@@ -64,14 +78,14 @@ export function Sidebar() {
   return (
     <aside className="w-56 min-h-screen bg-[#0f0f0f] border-r border-[#262626] flex flex-col">
       <div className="p-4 border-b border-[#262626]">
-        <Link href="/" className="flex items-center gap-2">
+        <NavLink href="/" className="flex items-center gap-2">
           <div className="w-8 h-8 bg-[#3b82f6] rounded-lg flex items-center justify-center">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
           <span className="font-semibold text-[#fafafa]">Ollama</span>
-        </Link>
+        </NavLink>
       </div>
       <nav className="flex-1 p-3">
         <ul className="space-y-1">
@@ -79,7 +93,7 @@ export function Sidebar() {
             const isActive = pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
             return (
               <li key={item.href}>
-                <Link
+                <NavLink
                   href={item.href}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                     isActive
@@ -89,7 +103,7 @@ export function Sidebar() {
                 >
                   {item.icon}
                   <span className="text-sm font-medium">{item.label}</span>
-                </Link>
+                </NavLink>
               </li>
             );
           })}
