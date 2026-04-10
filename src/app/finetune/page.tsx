@@ -32,23 +32,24 @@ export default function FineTunePage() {
   }, []);
 
   useEffect(() => {
-    if (selectedJob?.status === "running") {
-      const interval = setInterval(async () => {
-        try {
-          const updatedJob = await api.finetune.jobs.get(selectedJob.id);
-          const logsData = await api.finetune.jobs.logs(selectedJob.id);
-          setJobs((prev) =>
-            prev.map((j) => (j.id === updatedJob.id ? updatedJob : j))
-          );
-          setSelectedJob(updatedJob);
-          setLogs(logsData.logs);
-        } catch (err) {
-          console.error(err);
-        }
-      }, 2000);
-      return () => clearInterval(interval);
-    }
-  }, [selectedJob?.status]);
+    if (!selectedJob || selectedJob.status !== "running") return;
+    
+    const jobId = selectedJob.id;
+    const interval = setInterval(async () => {
+      try {
+        const updatedJob = await api.finetune.jobs.get(jobId);
+        const logsData = await api.finetune.jobs.logs(jobId);
+        setJobs((prev) =>
+          prev.map((j) => (j.id === updatedJob.id ? updatedJob : j))
+        );
+        setSelectedJob(updatedJob);
+        setLogs(logsData.logs);
+      } catch (err) {
+        console.error(err);
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [selectedJob]);
 
   async function fetchData() {
     try {
