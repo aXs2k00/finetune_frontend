@@ -1,12 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Loading, Skeleton } from "@/components/ui/Loading";
 import { api, type OllamaModel } from "@/lib/api";
+
+interface LibraryModel {
+  name: string;
+  size: number;
+  pulls: number;
+  description?: string;
+}
+
+interface LibraryResponse {
+  models: LibraryModel[];
+}
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -18,14 +29,28 @@ function formatBytes(bytes: number): string {
 
 export default function ModelsPage() {
   const [models, setModels] = useState<OllamaModel[]>([]);
+  const [libraryModels, setLibraryModels] = useState<LibraryModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [pulling, setPulling] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [pullModelName, setPullModelName] = useState("");
-  const [showPullModal, setShowPullModal] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [confirmDownload, setConfirmDownload] = useState<string | null>(null);
+  const [dropdownLoading, setDropdownLoading] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchModels();
+    fetchLibraryModels();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   async function fetchModels() {
@@ -39,18 +64,30 @@ export default function ModelsPage() {
     }
   }
 
-  async function handlePullModel() {
-    if (!pullModelName.trim()) return;
-    setPulling(pullModelName);
-    setShowPullModal(false);
+  async function fetchLibraryModels() {
     try {
-      await api.models.pull(pullModelName);
+      const response = await fetch("https://ollama.com/api/library.json");
+      if (response.ok) {
+        const data: LibraryResponse = await response.json();
+        setLibraryModels(data.models || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch library models:", err);
+    }
+  }
+
+  async function handlePullModel(name: string) {
+    setPulling(name);
+    setShowDropdown(false);
+    setSearchQuery("");
+    setConfirmDownload(null);
+    try {
+      await api.models.pull(name);
       await fetchModels();
     } catch (err) {
       console.error("Failed to pull model:", err);
     } finally {
       setPulling(null);
-      setPullModelName("");
     }
   }
 
@@ -64,9 +101,19 @@ export default function ModelsPage() {
     }
   }
 
-  const filteredModels = models.filter((m) =>
+  const installedModelNames = new Set(models.map((m) => m.name));
+
+  const localMatches = models.filter((m) =>
     m.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const libraryMatches = libraryModels
+    .filter(
+      (m) =>
+        !installedModelNames.has(m.name) &&
+        m.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .slice(0, 10);
 
   if (loading) {
     return (
@@ -91,21 +138,71 @@ export default function ModelsPage() {
           <h1 className="text-2xl font-bold text-[#fafafa]">Models</h1>
           <p className="text-sm text-[#a1a1a1]">Manage installed Ollama models</p>
         </div>
-        <Button onClick={() => setShowPullModal(true)}>
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Pull Model
-        </Button>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 relative" ref={dropdownRef}>
         <Input
-          placeholder="Search models..."
+          placeholder="Search installed models or search library..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setShowDropdown(true);
+          }}
+          onFocus={() => setShowDropdown(true)}
           className="max-w-md"
         />
+
+        {showDropdown && searchQuery && (
+          <div className="absolute z-50 w-full max-w-md mt-1 bg-[#1a1a1a] border border-[#333333] rounded-lg shadow-lg max-h-80 overflow-auto">
+            {localMatches.length > 0 && (
+              <>
+                <div className="px-3 py-2 text-xs text-[#737373] border-b border-[#262626]">
+                  INSTALLED
+                </div>
+                {localMatches.map((model) => (
+                  <div
+                    key={model.name}
+                    className="px-3 py-2 hover:bg-[#262626] cursor-pointer flex items-center justify-between"
+                    onClick={() => {
+                      setSearchQuery(model.name);
+                      setShowDropdown(false);
+                    }}
+                  >
+                    <span className="text-sm text-[#fafafa]">{model.name}</span>
+                    <Badge variant="success">Installed</Badge>
+                  </div>
+                ))}
+              </>
+            )}
+            {libraryMatches.length > 0 && (
+              <>
+                <div className="px-3 py-2 text-xs text-[#737373] border-b border-[#262626]">
+                  AVAILABLE FOR DOWNLOAD
+                </div>
+                {libraryMatches.map((model) => (
+                  <div
+                    key={model.name}
+                    className="px-3 py-2 hover:bg-[#262626] cursor-pointer flex items-center justify-between"
+                    onClick={() => setConfirmDownload(model.name)}
+                  >
+                    <div>
+                      <span className="text-sm text-[#fafafa]">{model.name}</span>
+                      <span className="text-xs text-[#737373] ml-2">{formatBytes(model.size)}</span>
+                    </div>
+                    <Button size="sm" variant="ghost">
+                      Download
+                    </Button>
+                  </div>
+                ))}
+              </>
+            )}
+            {localMatches.length === 0 && libraryMatches.length === 0 && searchQuery && (
+              <div className="px-3 py-4 text-sm text-[#737373] text-center">
+                No models found
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {pulling && (
@@ -119,18 +216,16 @@ export default function ModelsPage() {
         </Card>
       )}
 
-      {filteredModels.length === 0 ? (
+      {localMatches.length === 0 ? (
         <Card>
           <CardContent className="pt-6 text-center">
-            <p className="text-[#a1a1a1]">No models found</p>
-            <Button className="mt-4" onClick={() => setShowPullModal(true)}>
-              Pull your first model
-            </Button>
+            <p className="text-[#a1a1a1]">No models installed</p>
+            <p className="text-sm text-[#737373] mt-2">Type to search for models to download</p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredModels.map((model) => (
+          {localMatches.map((model) => (
             <Card key={model.name}>
               <CardContent className="pt-5">
                 <div className="flex items-start justify-between mb-3">
@@ -167,26 +262,24 @@ export default function ModelsPage() {
         </div>
       )}
 
-      {showPullModal && (
+      {confirmDownload && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md mx-4">
+          <Card className="w-full max-w-sm mx-4">
             <CardContent className="pt-6">
-              <h3 className="text-lg font-semibold text-[#fafafa] mb-4">Pull Model</h3>
-              <Input
-                label="Model name"
-                placeholder="e.g., llama2, codellama, mistral"
-                value={pullModelName}
-                onChange={(e) => setPullModelName(e.target.value)}
-              />
-              <p className="text-xs text-[#737373] mt-2">
-                Enter the model name from the Ollama library
+              <h3 className="text-lg font-semibold text-[#fafafa] mb-2">Download Model</h3>
+              <p className="text-sm text-[#a1a1a1] mb-4">
+                Are you sure you want to download "{confirmDownload}"?
               </p>
-              <div className="flex gap-2 mt-4">
-                <Button variant="secondary" className="flex-1" onClick={() => setShowPullModal(false)}>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => setConfirmDownload(null)}
+                >
                   Cancel
                 </Button>
-                <Button className="flex-1" onClick={handlePullModel} disabled={!pullModelName.trim()}>
-                  Pull
+                <Button className="flex-1" onClick={() => handlePullModel(confirmDownload)}>
+                  Download
                 </Button>
               </div>
             </CardContent>
