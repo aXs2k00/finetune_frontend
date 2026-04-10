@@ -11,8 +11,8 @@ interface NavLinkProps {
 
 function NavLink({ href, children, className }: NavLinkProps) {
   return (
-    <Link href={href} className={className}>
-      <a suppressHydrationWarning>{children}</a>
+    <Link href={href} className={className} suppressHydrationWarning>
+      {children}
     </Link>
   );
 }
