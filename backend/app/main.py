@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import httpx
+from routers import models, modelfiles, chat, finetune, system
 
 
 @asynccontextmanager
@@ -26,14 +27,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from ..routers import models, modelfiles, chat, finetune, system, metasploit
-
 app.include_router(models.router)
 app.include_router(modelfiles.router)
 app.include_router(chat.router)
 app.include_router(finetune.router)
 app.include_router(system.router)
-app.include_router(metasploit.router)
 
 
 @app.get("/")
