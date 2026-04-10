@@ -1,28 +1,22 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from typing import List
-import httpx
+import json
 from ..models.schemas import (
     OllamaModel,
     OllamaModelDetails,
     PullModelRequest,
+    CompletionRequest,
 )
+from ..services.ollama import ollama_service
 
 router = APIRouter(prefix="/api/models", tags=["models"])
 
-OLLAMA_BASE_URL = "http://localhost:11434"
-
-
-async def get_ollama_client():
-    async with httpx.AsyncClient(base_url=OLLAMA_BASE_URL, timeout=120.0) as client:
-        yield client
-
 
 @router.get("", response_model=List[OllamaModel])
-async def list_models(client: httpx.AsyncClient = Depends(get_ollama_client)):
+async def list_models():
     try:
-        response = await client.get("/api/tags")
-        response.raise_for_status()
-        data = response.json()
+        models = await ollama_service.list_models()
         return [
             OllamaModel(
                 name=model.get("name", ""),
@@ -30,50 +24,61 @@ async def list_models(client: httpx.AsyncClient = Depends(get_ollama_client)):
                 modified_at=model.get("modified_at"),
                 digest=model.get("digest"),
             )
-            for model in data.get("models", [])
+            for model in models
         ]
-    except httpx.HTTPError as e:
+    except Exception as e:
         raise HTTPException(status_code=503, detail=f"Ollama not connected: {str(e)}")
 
 
 @router.get("/{name}", response_model=OllamaModelDetails)
-async def get_model_details(
-    name: str, client: httpx.AsyncClient = Depends(get_ollama_client)
-):
+async def get_model_details(name: str):
     try:
-        response = await client.get(f"/api/show/{name}")
-        response.raise_for_status()
-        data = response.json()
+        data = await ollama_service.get_model_details(name)
         return OllamaModelDetails(
             modelfile=data.get("modelfile"),
             parameters=data.get("parameters"),
             template=data.get("template"),
         )
-    except httpx.HTTPError as e:
+    except Exception as e:
         raise HTTPException(status_code=404, detail=f"Model not found: {str(e)}")
 
 
 @router.post("/pull")
-async def pull_model(
-    request: PullModelRequest, client: httpx.AsyncClient = Depends(get_ollama_client)
-):
-    try:
-        response = await client.post(
-            "/api/pull", json={"name": request.name}
-        )
-        response.raise_for_status()
-        return {"status": "success", "model": request.name}
-    except httpx.HTTPError as e:
-        raise HTTPException(status_code=400, detail=f"Failed to pull model: {str(e)}")
+async def pull_model(request: PullModelRequest):
+    async def event_generator():
+        try:
+            async for chunk in ollama_service.pull_model(request.name):
+                yield f"data: {json.dumps(chunk)}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @router.delete("/{name}")
-async def delete_model(
-    name: str, client: httpx.AsyncClient = Depends(get_ollama_client)
-):
+async def delete_model(name: str):
     try:
-        response = await client.delete(f"/api/delete/{name}")
-        response.raise_for_status()
-        return {"status": "success", "model": name}
-    except httpx.HTTPError as e:
+        return await ollama_service.delete_model(name)
+    except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to delete model: {str(e)}")
+
+
+@router.post("/completion")
+async def run_completion(request: CompletionRequest):
+    async def event_generator():
+        try:
+            async for chunk in ollama_service.generate_completion(
+                model=request.model,
+                prompt=request.prompt,
+                temperature=request.temperature,
+                top_p=request.top_p,
+                top_k=request.top_k,
+                repeat_penalty=request.repeat_penalty,
+                context_length=request.context_length,
+                stop=request.stop,
+            ):
+                yield f"data: {json.dumps(chunk)}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")

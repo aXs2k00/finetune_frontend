@@ -153,6 +153,18 @@ class PullModelRequest(BaseModel):
     name: str
 
 
+class CompletionRequest(BaseModel):
+    model: str
+    prompt: str
+    stream: bool = True
+    temperature: float = Field(default=0.7, ge=0, le=2)
+    top_p: float = Field(default=0.9, ge=0, le=1)
+    top_k: int = Field(default=40, ge=1, le=100)
+    repeat_penalty: float = Field(default=1.1, ge=0, le=2)
+    context_length: int = Field(default=4096, ge=256, le=8192)
+    stop: Optional[List[str]] = None
+
+
 class SystemStats(BaseModel):
     ollama_connected: bool
     cpu_percent: Optional[float] = None
