@@ -1,87 +1,88 @@
-# Active Context: Next.js Starter Template
+# Active Context: Ollama Model Management WebApp
 
 ## Current State
 
-**Template Status**: ✅ Ready for development
+**Project Status**: ✅ Complete - Full-stack web application built
 
-The template is a clean Next.js 16 starter with TypeScript and Tailwind CSS 4. It's ready for AI-assisted expansion to build any type of application.
+The application is a complete Ollama Model Management WebApp with FastAPI backend and React/Next.js frontend. Build passes successfully.
 
 ## Recently Completed
 
-- [x] Base Next.js 16 setup with App Router
-- [x] TypeScript configuration with strict mode
-- [x] Tailwind CSS 4 integration
-- [x] ESLint configuration
-- [x] Memory bank documentation
-- [x] Recipe system for common features
+- [x] FastAPI backend with Ollama integration
+- [x] SQLAlchemy database models
+- [x] API routers (models, modelfiles, chat, finetune, system)
+- [x] Next.js 16 frontend with Tailwind CSS 4
+- [x] Dashboard page with stats and recent models
+- [x] Models page for model management
+- [x] Chat page with parameter sliders
+- [x] Fine-tune page with job management
+- [x] Config page for Modelfiles
+- [x] Docker Compose setup
 
 ## Current Structure
 
-| File/Directory | Purpose | Status |
-|----------------|---------|--------|
-| `src/app/page.tsx` | Home page | ✅ Ready |
-| `src/app/layout.tsx` | Root layout | ✅ Ready |
-| `src/app/globals.css` | Global styles | ✅ Ready |
-| `.kilocode/` | AI context & recipes | ✅ Ready |
+| Directory | Purpose | Status |
+|----------|---------|--------|
+| `backend/` | FastAPI Python backend | ✅ Complete |
+| `src/app/` | Next.js React frontend | ✅ Complete |
+| `src/components/` | UI components | ✅ Complete |
+| `src/lib/api.ts` | API client | ✅ Complete |
+| `docker-compose.yml` | Docker orchestration | ✅ Complete |
 
-## Current Focus
+## Quick Start
 
-The template is ready. Next steps depend on user requirements:
-
-1. What type of application to build
-2. What features are needed
-3. Design/branding preferences
-
-## Quick Start Guide
-
-### To add a new page:
-
-Create a file at `src/app/[route]/page.tsx`:
-```tsx
-export default function NewPage() {
-  return <div>New page content</div>;
-}
+### Backend
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-### To add components:
-
-Create `src/components/` directory and add components:
-```tsx
-// src/components/ui/Button.tsx
-export function Button({ children }: { children: React.ReactNode }) {
-  return <button className="px-4 py-2 bg-blue-600 text-white rounded">{children}</button>;
-}
+### Frontend
+```bash
+bun install
+bun dev
 ```
 
-### To add a database:
-
-Follow `.kilocode/recipes/add-database.md`
-
-### To add API routes:
-
-Create `src/app/api/[route]/route.ts`:
-```tsx
-import { NextResponse } from "next/server";
-
-export async function GET() {
-  return NextResponse.json({ message: "Hello" });
-}
+### Docker
+```bash
+docker-compose up
 ```
 
-## Available Recipes
+## Available Routes
 
-| Recipe | File | Use Case |
-|--------|------|----------|
-| Add Database | `.kilocode/recipes/add-database.md` | Data persistence with Drizzle + SQLite |
+| Endpoint | Description |
+|---------|-------------|
+| `/` | Dashboard |
+| `/models` | Model management |
+| `/chat` | Chat playground |
+| `/finetune` | Fine-tuning jobs |
+| `/config` | Modelfile editor |
 
-## Pending Improvements
+## API Endpoints
 
-- [ ] Add more recipes (auth, email, etc.)
-- [ ] Add example components
-- [ ] Add testing setup recipe
+| Endpoint | Method | Description |
+|---------|--------|-------------|
+| `/api/models` | GET | List models |
+| `/api/models/pull` | POST | Pull model |
+| `/api/models/{name}` | DELETE | Delete model |
+| `/api/modelfiles` | GET, POST | Manage Modelfiles |
+| `/api/chat/completions` | POST | Chat completion |
+| `/api/finetune/jobs` | GET, POST | Manage jobs |
+| `/api/system/stats` | GET | System stats |
 
 ## Session History
 
 | Date | Changes |
 |------|---------|
 | Initial | Template created with base setup |
+| Now | Full Ollama Model Management WebApp built |
+
+## Pending Improvements
+
+- [ ] Add real database (SQLite/PostgreSQL)
+- [ ] Add authentication
+- [ ] Add WebSocket for real-time logs
+- [ ] Add model metrics visualization
