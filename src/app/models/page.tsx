@@ -35,7 +35,6 @@ export default function ModelsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [confirmDownload, setConfirmDownload] = useState<string | null>(null);
-  const [dropdownLoading, setDropdownLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -268,7 +267,7 @@ export default function ModelsPage() {
             <CardContent className="pt-6">
               <h3 className="text-lg font-semibold text-[#fafafa] mb-2">Download Model</h3>
               <p className="text-sm text-[#a1a1a1] mb-4">
-                Are you sure you want to download "{confirmDownload}"?
+                Are you sure you want to download &quot;{confirmDownload}&quot;?
               </p>
               <div className="flex gap-2">
                 <Button
