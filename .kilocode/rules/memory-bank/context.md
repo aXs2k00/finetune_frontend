@@ -18,6 +18,8 @@ The application is a complete Ollama Model Management WebApp with FastAPI backen
 - [x] Fine-tune page with job management
 - [x] Config page for Modelfiles
 - [x] Docker Compose setup
+- [x] README.md with comprehensive usage guide
+- [x] start.sh automated startup script
 
 ## Current Structure
 
