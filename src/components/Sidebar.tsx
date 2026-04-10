@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface NavLinkProps {
   href: string;
@@ -11,7 +11,7 @@ interface NavLinkProps {
 
 function NavLink({ href, children, className }: NavLinkProps) {
   return (
-    <Link href={href} className={className} suppressHydrationWarning>
+    <Link href={href} className={className}>
       {children}
     </Link>
   );
@@ -73,7 +73,11 @@ const navItems: NavItem[] = [
 ];
 
 export function Sidebar() {
-  const pathname = usePathname();
+  const [pathname, setPathname] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPathname(window.location.pathname);
+  }, []);
 
   return (
     <aside className="w-56 min-h-screen bg-[#0f0f0f] border-r border-[#262626] flex flex-col">
@@ -90,7 +94,7 @@ export function Sidebar() {
       <nav className="flex-1 p-3">
         <ul className="space-y-1">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
+            const isActive = !pathname ? false : (pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)));
             return (
               <li key={item.href}>
                 <NavLink
