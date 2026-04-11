@@ -22,6 +22,25 @@ services:
       timeout: 10s
       retries: 3
 
+  metasploit:
+    image: metasploitframework/metasploit-framework:latest
+    container_name: metasploit
+    ports:
+      - "55553:55553"
+      - "55555:55555"
+    environment:
+      - METASPLOIT_DB_PASSWORD=metasploit
+      - METASPLOIT_DB_USER=msf
+      - METASPLOIT_DB_NAME=msf
+    volumes:
+      - msf-data:/root/.msf4
+    command: msfrpc -a 0.0.0.0 -p 55553 -t json -U msf -P metasploit
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "55553"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   backend:
     build:
       context: .
@@ -30,11 +49,17 @@ services:
       - "8000:8000"
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
+      - METASPLOIT_HOST=metasploit
+      - METASPLOIT_PORT=55553
+      - METASPLOIT_PASSWORD=metasploit
       - DATABASE_URL=sqlite:///./ollama_manager.db
     volumes:
       - ./backend:/app
     depends_on:
       - ollama
+      - metasploit
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   frontend:
     build:
@@ -49,3 +74,4 @@ services:
 
 volumes:
   ollama-data:
+  msf-data:

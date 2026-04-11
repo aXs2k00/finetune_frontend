@@ -167,4 +167,83 @@ export const api = {
   system: {
     stats: () => fetchApi<SystemStats>("/api/system/stats"),
   },
+
+  msf: {
+    sessions: {
+      list: () => fetchApi<MetasploitSession[]>("/api/msf/sessions"),
+      get: (id: number) => fetchApi<MetasploitSession>(`/api/msf/sessions/${id}`),
+      interact: (id: number, command: string) =>
+        fetchApi<{ status: string }>(`/api/msf/sessions/${id}/interact`, {
+          method: "POST",
+          body: JSON.stringify({ session_id: id, command }),
+        }),
+      kill: (id: number) => fetchApi<{ status: string }>(`/api/msf/sessions/${id}`, {
+        method: "DELETE",
+      }),
+    },
+    modules: {
+      list: (type: string = "exploit") =>
+        fetchApi<MetasploitModule[]>(`/api/msf/modules?mtype=${type}`),
+      search: (query: string, type: string = "exploit") =>
+        fetchApi<MetasploitModule[]>(`/api/msf/modules/search?query=${query}&mtype=${type}`),
+      run: (module: string, target: string, options: Record<string, string> = {}) =>
+        fetchApi<{ status: string }>("/api/msf/modules/run", {
+          method: "POST",
+          body: JSON.stringify({ module, target, options }),
+        }),
+    },
+    status: () => fetchApi<{ connected: boolean; host: string; port: number }>("/api/msf/status"),
+    connect: () => fetchApi<{ status: string }>("/api/msf/connect", { method: "POST" }),
+    disconnect: () => fetchApi<{ status: string }>("/api/msf/disconnect", { method: "POST" }),
+  },
+
+  mission: {
+    plan: (objective: string, target: string) =>
+      fetchApi<MissionPlan>("/api/mission/plan", {
+        method: "POST",
+        body: JSON.stringify({ objective, target }),
+      }),
+    templates: () =>
+      fetchApi<{ templates: string[]; details: Record<string, { phases: number; estimated_duration: string }> }>(
+        "/api/mission/templates"
+      ),
+    getTemplate: (name: string) =>
+      fetchApi<MissionPlan>(`/api/mission/templates/${name}`),
+  },
 };
+
+export interface MetasploitSession {
+  id: number;
+  type: string;
+  target: string;
+  exploit: string;
+  payload: string;
+  launched_at: number;
+  last_seen: number;
+}
+
+export interface MetasploitModule {
+  name: string;
+  full_name: string;
+  type: string;
+  description: string;
+}
+
+export interface MissionPlan {
+  mission_id: string;
+  objective: string;
+  target: string;
+  phases: TaskStep[];
+  estimated_duration: string;
+  risk_assessment: string;
+}
+
+export interface TaskStep {
+  step: number;
+  phase: string;
+  description: string;
+  module?: string;
+  parameters: Record<string, string>;
+  expected_result?: string;
+  safety_level: string;
+}

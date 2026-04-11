@@ -26,13 +26,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from ..routers import models, modelfiles, chat, finetune, system
+from ..routers import models, modelfiles, chat, finetune, system, metasploit, mission
 
 app.include_router(models.router)
 app.include_router(modelfiles.router)
 app.include_router(chat.router)
 app.include_router(finetune.router)
 app.include_router(system.router)
+app.include_router(metasploit.router)
+app.include_router(mission.router)
 
 
 @app.get("/")
